@@ -1,0 +1,1 @@
+test/corpus/oeb/** -text whitespace=-trailing-space,-blank-at-eof

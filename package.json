@@ -1,0 +1,38 @@
+{
+  "name": "usfm-parser",
+  "version": "0.1.0",
+  "description": "A semantic, presentation-independent model and parser for USFM scripture documents.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
+    "test": "npm run check && tsc -p tsconfig.test.json && node .test-dist/test/model-conformance.test.js && node .test-dist/test/parser-basic.test.js && node .test-dist/test/parser-structure.test.js && node .test-dist/test/parser-remaining.test.js",
+    "audit:oeb": "tsc -p tsconfig.test.json && node .test-dist/test/oeb-corpus.audit.js"
+  },
+  "keywords": [
+    "bible",
+    "scripture",
+    "usfm",
+    "parser",
+    "typescript"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
