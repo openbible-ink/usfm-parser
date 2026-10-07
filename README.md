@@ -21,6 +21,7 @@ first semantic parsing slice for book IDs, chapters, paragraphs, verses, and tex
 - `src/tokenize.ts` — tokenizer and exact CST serialization
 - `src/transform.ts` — CST-to-semantic-AST transformation
 - `src/parse.ts` — high-level parsing entry point
+- `src/oeb` — OEB variant projection, source mapping, and composed parser
 - `src/index.ts` — public package exports
 - `test/fixtures` — focused USFM problem scenarios
 - `test/expectations` — manually specified semantic ASTs
@@ -42,3 +43,25 @@ unwrapped content, and character styles that cross block boundaries.
 
 The OEB audit verifies exact CST round trips and source ranges across the full
 CC0 corpus, then reports semantic unknown markers and diagnostics by frequency.
+
+## OEB variants
+
+The `usfm-parser/oeb` entry point projects tagged OEB alternatives before
+calling the generic parser:
+
+```ts
+import { parseOeb } from "usfm-parser/oeb";
+
+const document = parseOeb(source, {
+  variants: {
+    spelling: "cth",
+    gender: "neut",
+    versification: "nrsv",
+    gehenna: "gehenna",
+    ioudaioi: "ioudaioi",
+  },
+});
+```
+
+Use `parseOebWithProjection` when the projected USFM and source map are also
+needed. Additional source tags can be selected with `variants.tags`.

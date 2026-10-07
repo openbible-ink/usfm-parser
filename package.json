@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./oeb": {
+      "types": "./dist/oeb/index.d.ts",
+      "import": "./dist/oeb/index.js"
     }
   },
   "files": [
@@ -17,7 +21,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit",
-    "test": "npm run check && tsc -p tsconfig.test.json && node .test-dist/test/model-conformance.test.js && node .test-dist/test/parser-basic.test.js && node .test-dist/test/parser-structure.test.js && node .test-dist/test/parser-remaining.test.js",
+    "test": "npm run check && tsc -p tsconfig.test.json && node .test-dist/test/model-conformance.test.js && node .test-dist/test/parser-basic.test.js && node .test-dist/test/parser-structure.test.js && node .test-dist/test/parser-remaining.test.js && node .test-dist/test/oeb-variants.test.js",
     "audit:oeb": "tsc -p tsconfig.test.json && node .test-dist/test/oeb-corpus.audit.js"
   },
   "keywords": [
