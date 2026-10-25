@@ -91,8 +91,11 @@ function applyTypography(value: string, options: OebVariantOptions): string {
   const swap = options.swapPunctuation ?? (options.spelling === "cth");
   let result = value;
   if (swap) {
+    const apostrophePlaceholder = "\u{F0000}";
+    result = result.replace(/(?<=[\p{L}\p{N}])’(?=[\p{L}\p{N}])/gu, apostrophePlaceholder);
     const replacements: Record<string, string> = { "“": "‘", "”": "’", "‘": "“", "’": "”" };
     result = [...result].map((character) => replacements[character] ?? character).join("");
+    result = result.replaceAll(apostrophePlaceholder, "’");
   }
   if (options.normalizeApostrophes ?? true) result = result.replaceAll("'", "’");
   return result;

@@ -12,6 +12,9 @@ function assert(condition: unknown, message: string): asserts condition {
 const sample = "Use [us:color|cth:colour], [neut:they|masc:he], and [:base|extra:extra].";
 assert(projectOebSource(sample).usfm === "Use color, they, and base.", "default OEB projection is incorrect");
 assert(projectOebSource(sample, { spelling: "cth", gender: "masc", swapPunctuation: false }).usfm === "Use colour, he, and base.", "selected OEB projection is incorrect");
+
+const punctuation = projectOebSource("Jehovah’s \u201cword\u201d", { spelling: "cth" }).usfm;
+assert(punctuation === "Jehovah’s ‘word’", "Commonwealth punctuation must not treat an in-word apostrophe as a closing quote");
 assert(projectOebSource("[one,two:A|three:B]", { tags: ["two", "three"] }).usfm === "AB", "all matching branches must be concatenated");
 assert(projectOebSource("[one:|two:value]", { tags: ["one"] }).usfm === "", "empty selected branches must be supported");
 
