@@ -95,4 +95,22 @@ assert(continuedEmphasis?.type === "inline" && continuedEmphasis.style === "em",
 assert(continuedEmphasis.extensions?.["org.bible-ast.continuationOf"] === originalEmphasis.id, "fixture 13: split spans must be explicitly linked");
 assert(!crossingStyle.diagnostics, "fixture 13: a valid cross-block style must not produce diagnostics");
 
-console.log("Parser fixtures 4 through 13 passed.");
+const attributedWords = parseFixture("14-word-attributes.usfm").document;
+const attributedBlock = blocks(attributedWords.children)[0];
+assert(attributedBlock, "fixture 14: paragraph must be retained");
+const word = attributedBlock.children.find((node) => node.type === "inline" && node.style === "w");
+assert(word?.type === "inline", "fixture 14: word marker must become an inline node");
+assert(word.attributes?.strong === "G1722", "fixture 14: Strong's number must be retained as an attribute");
+assert(word.children[0]?.type === "text" && word.children[0].value === "In", "fixture 14: attributes must not leak into rendered word text");
+const allText = JSON.stringify(attributedWords.children);
+assert(!allText.includes("strong=\\\""), "fixture 14: serialized semantic content must not contain raw word attributes");
+assert(allText.includes("יהוה"), "fixture 14: nested Hebrew word text inside a footnote must be retained");
+const attributedText = attributedBlock.children
+  .flatMap((node) => node.type === "inline" ? node.children : [node])
+  .filter((node) => node.type === "text")
+  .map((node) => node.value)
+  .join("");
+assert(attributedText.includes("In the beginning."), "fixture 14: whitespace between attributed words must remain semantic text");
+assert(!attributedWords.diagnostics, "fixture 14: supported word attributes must not produce diagnostics");
+
+console.log("Parser fixtures 4 through 14 passed.");

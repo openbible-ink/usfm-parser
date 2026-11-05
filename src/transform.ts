@@ -25,6 +25,10 @@ interface LinePayload {
   valueEnd: number;
 }
 
+interface AttributedPayload extends LinePayload {
+  attributes?: Record<string, string>;
+}
+
 function linePayload(token: CstTextToken | undefined): LinePayload {
   if (!token) return { value: "", valueStart: 0, valueEnd: 0 };
   const lineEnd = token.value.search(/\r?\n/);
@@ -32,6 +36,26 @@ function linePayload(token: CstTextToken | undefined): LinePayload {
   const leading = rawLine.match(/^\s*/)?.[0].length ?? 0;
   const value = rawLine.slice(leading).replace(/\s+$/, "");
   return { value, valueStart: leading, valueEnd: leading + value.length };
+}
+
+function attributedPayload(payload: LinePayload): AttributedPayload {
+  const separator = payload.value.indexOf("|");
+  if (separator === -1) return payload;
+
+  const value = payload.value.slice(0, separator).replace(/\s+$/, "");
+  const attributes: Record<string, string> = {};
+  const source = payload.value.slice(separator + 1);
+  const pattern = /([A-Za-z][A-Za-z0-9_-]*)\s*=\s*"([^"]*)"/g;
+  for (const match of source.matchAll(pattern)) {
+    attributes[match[1]!] = match[2]!;
+  }
+
+  return {
+    value,
+    valueStart: payload.valueStart,
+    valueEnd: payload.valueStart + value.length,
+    ...(Object.keys(attributes).length > 0 ? { attributes } : {}),
+  };
 }
 
 function subrange(token: CstTextToken, start: number, end: number): SourceRange {
@@ -80,7 +104,8 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
     const token = cst.children[index]!;
     if (token.type === "text") {
       const value = token.value.replace(/\r?\n$/, "");
-      if (value.trim().length > 0) {
+      const whitespaceIsSemantic = value.length > 0 && Boolean(currentBlock || currentNoteField || inlineStack.length);
+      if (value.trim().length > 0 || whitespaceIsSemantic) {
         append({ id: nextId(), type: "text", value, source: subrange(token, 0, value.length) });
       }
       continue;
@@ -174,10 +199,16 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
       case "s4":
       case "b":
       case "ms":
+      case "ms1":
       case "ms2":
       case "d":
       case "pc":
       case "pi":
+      case "pi1":
+      case "mi":
+      case "li1":
+      case "cl":
+      case "sp":
       case "qm":
       case "qm2":
       case "periph":
@@ -226,13 +257,28 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
       case "nd":
       case "+nd":
       case "qs":
-      case "em": {
-        const inline: InlineStyleNode = { id: nextId(), type: "inline", style: token.marker, children: [], source: token.source };
+      case "em":
+      case "bk":
+      case "wh":
+      case "+wh":
+      case "w":
+      case "+w": {
+        const styledPayload: AttributedPayload = token.marker === "w" || token.marker === "+w"
+          ? attributedPayload(payload)
+          : payload;
+        const inline: InlineStyleNode = {
+          id: nextId(),
+          type: "inline",
+          style: token.marker,
+          children: [],
+          source: token.source,
+          ...(styledPayload.attributes ? { attributes: styledPayload.attributes } : {}),
+        };
         append(inline);
         inlineStack.push({ marker: token.marker, node: inline });
         if (payloadToken) {
-          if (payload.value) {
-            append({ id: nextId(), type: "text", value: payload.value, source: subrange(payloadToken, payload.valueStart, payload.valueEnd) });
+          if (styledPayload.value) {
+            append({ id: nextId(), type: "text", value: styledPayload.value, source: subrange(payloadToken, styledPayload.valueStart, styledPayload.valueEnd) });
           }
           index += 1;
         }
@@ -258,6 +304,7 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
       case "fr":
       case "ft":
       case "fq":
+      case "fqa":
       case "fk":
       case "xo":
       case "xt": {
