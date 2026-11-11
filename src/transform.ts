@@ -38,6 +38,19 @@ function linePayload(token: CstTextToken | undefined): LinePayload {
   return { value, valueStart: leading, valueEnd: leading + value.length };
 }
 
+/**
+ * Scripture content differs from metadata payloads: whitespace immediately
+ * before a following inline marker is part of the rendered sentence.
+ */
+function semanticLinePayload(token: CstTextToken | undefined): LinePayload {
+  if (!token) return { value: "", valueStart: 0, valueEnd: 0 };
+  const lineEnd = token.value.search(/\r?\n/);
+  const rawLine = lineEnd === -1 ? token.value : token.value.slice(0, lineEnd);
+  const leading = rawLine.match(/^\s*/)?.[0].length ?? 0;
+  const value = rawLine.slice(leading);
+  return { value, valueStart: leading, valueEnd: leading + value.length };
+}
+
 function attributedPayload(payload: LinePayload): AttributedPayload {
   const separator = payload.value.indexOf("|");
   if (separator === -1) return payload;
@@ -213,6 +226,7 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
       case "qm2":
       case "periph":
       case "nb": {
+        const contentPayload = semanticLinePayload(payloadToken);
         const continuations = inlineStack.map(({ marker, node }) => ({ marker, previousNodeId: node.id }));
         inlineStack.length = 0;
         currentNote = undefined;
@@ -231,22 +245,23 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
           inlineStack.push({ marker: continuation.marker, node: inline });
         }
         if (payloadToken) {
-          if (payload.value) {
-            append({ id: nextId(), type: "text", value: payload.value, source: subrange(payloadToken, payload.valueStart, payload.valueEnd) });
+          if (contentPayload.value) {
+            append({ id: nextId(), type: "text", value: contentPayload.value, source: subrange(payloadToken, contentPayload.valueStart, contentPayload.valueEnd) });
           }
           index += 1;
         }
         break;
       }
       case "v": {
-        const separator = payload.value.search(/\s/);
-        const number = separator === -1 ? payload.value : payload.value.slice(0, separator);
-        const content = separator === -1 ? "" : payload.value.slice(separator).replace(/^\s+/, "");
+        const versePayload = semanticLinePayload(payloadToken);
+        const separator = versePayload.value.search(/\s/);
+        const number = separator === -1 ? versePayload.value : versePayload.value.slice(0, separator);
+        const content = separator === -1 ? "" : versePayload.value.slice(separator).replace(/^\s+/, "");
         const ref = `${bookCode ?? "UNK"}.${currentChapter ?? "?"}.${number || "?"}`;
         append({ id: nextId(), type: "verseStart", number: number || "?", ref, source: token.source });
         if (payloadToken) {
           if (content) {
-            const contentStart = payloadToken.value.indexOf(content, payload.valueStart);
+            const contentStart = payloadToken.value.indexOf(content, versePayload.valueStart);
             append({ id: nextId(), type: "text", value: content, source: subrange(payloadToken, contentStart, contentStart + content.length) });
           }
           index += 1;
@@ -263,9 +278,10 @@ export function cstToBibleDocument(cst: CstDocument, options: TransformOptions):
       case "+wh":
       case "w":
       case "+w": {
+        const inlinePayload = semanticLinePayload(payloadToken);
         const styledPayload: AttributedPayload = token.marker === "w" || token.marker === "+w"
-          ? attributedPayload(payload)
-          : payload;
+          ? attributedPayload(inlinePayload)
+          : inlinePayload;
         const inline: InlineStyleNode = {
           id: nextId(),
           type: "inline",

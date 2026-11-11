@@ -113,4 +113,17 @@ const attributedText = attributedBlock.children
 assert(attributedText.includes("In the beginning."), "fixture 14: whitespace between attributed words must remain semantic text");
 assert(!attributedWords.diagnostics, "fixture 14: supported word attributes must not produce diagnostics");
 
+const inlineWhitespace = parseUsfm(`\\id JOS
+\\c 1
+\\p
+\\v 1 servant of the \\nd Lord\\nd*, the Lord said.
+\\p Before the \\nd Lord\\nd* all people stood.
+`, options);
+const whitespaceBlocks = blocks(inlineWhitespace.children);
+const verseLeadingText = whitespaceBlocks[0]?.children[1];
+const paragraphLeadingText = whitespaceBlocks[1]?.children[0];
+assert(verseLeadingText?.type === "text" && verseLeadingText.value === "servant of the ", "inline whitespace: a verse payload must retain its space before an inline marker");
+assert(paragraphLeadingText?.type === "text" && paragraphLeadingText.value === "Before the ", "inline whitespace: a paragraph payload must retain its space before an inline marker");
+assert(whitespaceBlocks[0]?.children[2]?.type === "inline" && whitespaceBlocks[0].children[2].style === "nd", "inline whitespace: the divine-name span must remain structured");
+
 console.log("Parser fixtures 4 through 14 passed.");
